@@ -1,0 +1,4 @@
+DISPLAY_NAME=GTA RP Xbox Bot
+MAIN=index.js
+MEMORY=256
+VERSION=recommended
