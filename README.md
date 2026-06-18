@@ -1,4 +1,4 @@
-# 🎮 SPRP — Bot de Moderação
+# 🎮 - Bot de Moderação
 
 ---
 
@@ -60,12 +60,12 @@ npm start
 
 ---
 
-## ☁️ Deploy na Square Cloud
+## ☁️ Deploy na host
 
 1. Comprima todos os arquivos em um `.zip` (sem incluir a pasta `node_modules`)
-2. Acesse https://squarecloud.app
+2. Acesse sua host
 3. Faça upload do `.zip`
-4. O `squarecloud.app` já está configurado
+4. Configure o arquivo da host em .app
 
 ---
 
@@ -92,11 +92,10 @@ Para desativar o kick automático de contas novas, defina no `config.json`:
 ## 📁 Estrutura de arquivos
 
 ```
-gta-rp-bot/
+botjs/
 ├── index.js          ← Arquivo principal
-├── config.json       ← Configurações do servidor
+├── config.json       ← Configurações do servidor (gitignore)
 ├── package.json
-├── squarecloud.app   ← Deploy Square Cloud
 ├── commands/         ← Todos os comandos
 └── data/             ← Dados persistidos (warns, bans, etc.)
     ├── warns.json
