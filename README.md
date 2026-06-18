@@ -6,13 +6,13 @@
 
 | Módulo | Comandos / Funções |
 |---|---|
-| **Punições** | `!ban` `!tempban` `!unban` `!kick` |
-| **Advertências** | `!warn` `!warns` `!unwarn` (3 warns = ban auto) |
-| **Staff** | `!warnstaff` `!warnsstaf` |
-| **Castigo** | `!castigo` `!uncastigo` (com duração automática) |
+| **Punições** | `!ban` `!tempban` `!rban` `!kick` |
+| **Advertências** | `!adv` `!advs`(consulta a quantidade de advs) `!radv` (3 adv = ban auto) |
+| **Staff** | `!advstaff` `!advsstaf` (consulta quantidade de advs) |
+| **Castigo** | `!castigo` `!rcastigo` (com duração automática) |
 | **Anti-Alt** | `!altban` `!linkalts` `!alts` `!containfo` |
-| **Utilitários** | `!clean` `!tp` `!perms` `!help` |
-| **AutoMod** | Anti-link, Anti-invite, Anti-flood, Anti-bot, Anti-alt |
+| **Utilitários** | `!clean` `!tp` `!perms` `!puxar` `!help` |
+| **AutoModerador** | Anti-link, Anti-invite, Anti-flood, Anti-bot, Anti-alt |
 
 ---
 
