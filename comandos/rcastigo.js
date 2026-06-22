@@ -1,16 +1,16 @@
 const { EmbedBuilder } = require('discord.js');
  
 module.exports = {
-    name: 'uncastigo',
+    name: 'rcastigo',
     aliases: ['soltar', 'libertar', 'untimeout', 'unmute'],
     description: 'Remove o castigo de um membro',
-    usage: '!uncastigo @usuario',
+    usage: '!rcastigo @usuario',
     permission: 'castigo',
  
     async execute(msg, args, client) {
         const target = msg.mentions.members.first();
         if (!target)
-            return msg.reply('❌ Use: `!uncastigo @usuario`');
+            return msg.reply('❌ Use: `!rcastigo @usuario`');
  
         if (!target.isCommunicationDisabled())
             return msg.reply('⚠️ Este usuário não está em castigo.');

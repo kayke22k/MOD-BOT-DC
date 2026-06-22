@@ -4,20 +4,20 @@ module.exports = {
     name: 'puxar',
     aliases: ['puxar', 'chamar'],
     description: 'Puxa um usuário para sua call atual (ou canal mencionado)',
-    usage: '!vir @usuario [#canal-de-voz]',
+    usage: '!puxar @usuario [#canal-de-voz]',
     permission: 'tp',
 
     async execute(msg, args, client) {
         const target = msg.mentions.members.first();
         if (!target)
-            return msg.reply('❌ Use: `!vir @usuario` ou `!vir @usuario #canal`');
+            return msg.reply('❌ Use: `!puxar @usuario` ou `!puxar @usuario #canal`');
 
         const channelMention = msg.mentions.channels.first();
         const modVoice       = msg.member.voice.channel;
         const destChannel    = channelMention ?? modVoice;
 
         if (!destChannel)
-            return msg.reply('❌ Você precisa estar em uma call ou mencionar um canal.\nEx: `!vir @usuario #sala-staff`');
+            return msg.reply('❌ Você precisa estar em uma call ou mencionar um canal.\nEx: `!puxar @usuario #sala-staff`');
 
         if (destChannel.type !== 2)
             return msg.reply('❌ O canal mencionado não é um canal de voz.');
