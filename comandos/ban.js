@@ -33,6 +33,14 @@ module.exports = {
         ]}).catch(() => {});
 
         await target.ban({ reason: `${msg.author.tag} | ${reason}` });
+        client.registerBan({
+            userId: target.id,
+            tag: target.user.tag,
+            type: 'ban',
+            reason,
+            moderator: msg.author.tag,
+            moderatorId: msg.author.id
+        });
 
         const embed = new EmbedBuilder()
             .setColor('#FF0000')

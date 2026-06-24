@@ -1,11 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
-    name: 'containfo',
+    name: 'consconta',
     aliases: ['containfo', 'userinfo', 'conta'],
     description: 'Mostra informações de uma conta (idade, suspeitas de alt, histórico)',
-    usage: '!containfo @usuario',
-    permission: 'warns',
+    usage: '!consconta @usuario',
+    permission: 'consconta',
 
     async execute(msg, args, client) {
         const target = msg.mentions.members.first() ?? msg.member;

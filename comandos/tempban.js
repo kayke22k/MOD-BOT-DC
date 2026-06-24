@@ -51,6 +51,16 @@ module.exports = {
         ]}).catch(() => {});
 
         await target.ban({ reason: `[TEMPBAN ${args[1]}] ${msg.author.tag} | ${reason}` });
+        client.registerBan({
+            userId: target.id,
+            tag: target.user.tag,
+            type: 'tempban',
+            reason,
+            moderator: msg.author.tag,
+            moderatorId: msg.author.id,
+            expiresAt,
+            duration: args[1]
+        });
 
         const embed = new EmbedBuilder()
             .setColor('#FF8800')
@@ -58,7 +68,7 @@ module.exports = {
             .setThumbnail(target.user.displayAvatarURL())
             .addFields(
                 { name: '👤 Usuário',   value: `${target.user.tag}\n\`${target.id}\``, inline: true },
-                { name: '👮 Moderador', value: msg.author.tag, inline: true },
+                { name: '👮 Autor', value: msg.author.tag, inline: true },
                 { name: '⏰ Duração',   value: args[1], inline: true },
                 { name: '📅 Expira em', value: `<t:${expireStamp}:F>`, inline: true },
                 { name: '📋 Motivo',    value: reason }

@@ -1,10 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
-    name: 'alts',
+    name: 'consalts',
+    aliases: ['alts'],
     description: 'Mostra as alts registradas de um usuário',
-    usage: '!alts @usuario',
-    permission: 'ban',
+    usage: '!consalts @usuario',
+    permission: 'consalts',
 
     async execute(msg, args, client) {
         const target = msg.mentions.members.first();

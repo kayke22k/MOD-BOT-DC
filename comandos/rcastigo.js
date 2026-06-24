@@ -2,10 +2,10 @@ const { EmbedBuilder } = require('discord.js');
  
 module.exports = {
     name: 'rcastigo',
-    aliases: ['soltar', 'libertar', 'untimeout', 'unmute'],
+    aliases: ['soltar', 'libertar'],
     description: 'Remove o castigo de um membro',
     usage: '!rcastigo @usuario',
-    permission: 'castigo',
+    permission: 'rcastigo',
  
     async execute(msg, args, client) {
         const target = msg.mentions.members.first();

@@ -53,7 +53,7 @@ module.exports = {
             .setTitle('🗑️ Chat Limpo')
             .addFields(
                 { name: '📊 Mensagens',  value: `${count}`, inline: true },
-                { name: '👮 Moderador',  value: msg.author.tag, inline: true },
+                { name: '👮 Autor',  value: msg.author.tag, inline: true },
                 { name: '📍 Canal',      value: `<#${msg.channel.id}>`, inline: true },
                 ...(filterUser ? [{ name: '👤 Filtrado por', value: filterUser.user.tag, inline: true }] : [])
             ).setTimestamp());

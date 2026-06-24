@@ -22,7 +22,7 @@ module.exports = {
             .setTitle(`👢 Você foi expulso do ${msg.guild.name}`)
             .addFields(
                 { name: '📋 Motivo',    value: reason },
-                { name: '👮 Moderador', value: msg.author.tag }
+                { name: '👮 Autor', value: msg.author.tag }
             ).setTimestamp()
         ]}).catch(() => {});
 
@@ -34,7 +34,7 @@ module.exports = {
             .setThumbnail(target.user.displayAvatarURL())
             .addFields(
                 { name: '👤 Usuário',   value: `${target.user.tag}\n\`${target.id}\``, inline: true },
-                { name: '👮 Moderador', value: msg.author.tag, inline: true },
+                { name: '👮 Autor', value: msg.author.tag, inline: true },
                 { name: '📋 Motivo',    value: reason }
             )
             .setFooter({ text: 'SPRP • Moderação' })

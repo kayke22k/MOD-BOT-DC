@@ -8,6 +8,7 @@ const {
 } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+const { randomBytes } = require('crypto');
 const config = require('./config.json');
 
 // ── Cliente ───────────────────────────────────────────────────────
@@ -53,7 +54,49 @@ client.sendLog = async (guild, embed, type = 'mod') => {
 // ── Sistema de permissões customizado ────────────────────────────
 // Sobrescreve as permissões nativas do Discord.
 // Prioridade: custom user → custom role → cargo staff → negar.
+const idList = (...values) => values
+    .flatMap(v => Array.isArray(v) ? v : [v])
+    .filter(Boolean)
+    .map(String);
+
+client.isOwner = (member) => {
+    const id = String(member?.id ?? member?.user?.id ?? '');
+    if (!id) return false;
+
+    const ownerIds = idList(config.ownerId, config.donoId, config.ownerIds, config.owners, config.donos);
+    return ownerIds.includes(id) || member?.guild?.ownerId === id;
+};
+
+client.isProgrammer = (member) => {
+    if (client.isOwner(member)) return true;
+
+    const roleIds = idList(
+        config.roles?.programadores,
+        config.roles?.developers,
+        config.roles?.devs,
+        config.programmerRoleIds,
+        config.developerRoleIds
+    );
+    return member?.roles?.cache?.some(role => roleIds.includes(role.id)) ?? false;
+};
+
+client.canViewTelemetry = (member) => client.isProgrammer(member);
+client.canManageBotAuth = (member) => client.isProgrammer(member);
+
+client.getConfiguredAllowedBotIds = () => new Set(idList(config.allowedBots));
+
+client.getAuthorizedBotIds = () => {
+    const ids = client.getConfiguredAllowedBotIds();
+    const saved = client.loadData('authorizedbots.json');
+    for (const id of Object.keys(saved)) ids.add(String(id));
+    return ids;
+};
+
+client.isBotAuthorized = (botId) => client.getAuthorizedBotIds().has(String(botId));
+
 client.hasPermission = (member, perm) => {
+    if (client.isOwner(member)) return true;
+
     // Administrador tem tudo
     if (member.permissions.has(PermissionsBitField.Flags.Administrator)) return true;
 
@@ -74,10 +117,151 @@ client.hasPermission = (member, perm) => {
     // Fallback: verifica se é staff
     const isStaff = member.roles.cache.some(r => config.roles.staff.includes(r.id));
     const staffCmds = [
-        'ban','tempban','unban','kick','shadowban',
-        'warn','warnstaff','clean','castigo','tp','warns','unwarn'
+        'ban', 'tempban', 'rban', 'consbans', 'kick',
+        'adv', 'consadv', 'radv', 'advstaff', 'consadvstaff',
+        'castigo', 'rcastigo',
+        'altban', 'linkalts', 'rlinkalts', 'consalts', 'consconta',
+        'clean', 'tp', 'puxar'
     ];
     return isStaff ? staffCmds.includes(perm) : false;
+};
+
+client.addAutomaticWarn = async ({ guild, member, channel, reason, source = 'Sistema Anti-Flood' }) => {
+    const warns = client.loadData('warns.json');
+    if (!warns[member.id]) warns[member.id] = { tag: member.user.tag, warns: [] };
+
+    const warnEntry = {
+        id:          'w_' + randomBytes(4).toString('hex'),
+        tipo:        'CHAT',
+        tipoLabel:   '💬 Flood / spam',
+        reason,
+        moderator:   source,
+        moderatorId: client.user?.id ?? 'system',
+        automatic:   true,
+        timestamp:   Date.now()
+    };
+
+    warns[member.id].warns.push(warnEntry);
+    warns[member.id].tag = member.user.tag;
+    client.saveData('warns.json', warns);
+
+    const count = warns[member.id].warns.length;
+    const maxWarns = Number(client.config.warns?.maxWarns ?? 3);
+    const remaining = Math.max(maxWarns - count, 0);
+
+    await member.user.send({ embeds: [new EmbedBuilder()
+        .setColor(count >= maxWarns ? '#FF0000' : '#FFAA00')
+        .setTitle(`⚠️ Advertência automática — ${guild.name}`)
+        .addFields(
+            { name: '📋 Motivo', value: reason },
+            { name: '🏷️ Tipo', value: warnEntry.tipoLabel, inline: true },
+            { name: '⚠️ Advertências', value: `${count} / ${maxWarns}`, inline: true },
+            { name: '👮 Responsável', value: source }
+        )
+        .setFooter({ text: count >= maxWarns ? '⛔ LIMITE ATINGIDO — BAN AUTOMÁTICO' : `Mais ${remaining} advertência(s) resultará em ban.` })
+        .setTimestamp()
+    ]}).catch(() => {});
+
+    const warnEmbed = new EmbedBuilder()
+        .setColor(count >= maxWarns ? '#FF0000' : '#FFAA00')
+        .setTitle('⚠️ Advertência Automática')
+        .setThumbnail(member.user.displayAvatarURL())
+        .addFields(
+            { name: '👤 Usuário', value: `${member.user.tag}\n\`${member.id}\``, inline: true },
+            { name: '🤖 Sistema', value: source, inline: true },
+            { name: '🏷️ Tipo', value: warnEntry.tipoLabel, inline: true },
+            { name: '⚠️ Advertências', value: `**${count} / ${maxWarns}**`, inline: true },
+            { name: '📋 Motivo', value: reason }
+        )
+        .setFooter({ text: 'SPRP • Moderação automática' })
+        .setTimestamp();
+
+    await client.sendLog(guild, warnEmbed);
+
+    let banned = false;
+    if (count >= maxWarns) {
+        const allWarns = warns[member.id].warns
+            .map((w, i) => `**${i + 1}.** ${w.tipoLabel ?? 'Advertência'} — ${w.reason} *(${w.moderator})*`)
+            .join('\n');
+
+        const banEmbed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('🔨 Ban Automático — Limite de Advertências Atingido')
+            .setThumbnail(member.user.displayAvatarURL())
+            .setDescription(`<@${member.id}> foi banido automaticamente por atingir **${maxWarns} advertências**.`)
+            .addFields({ name: '📋 Histórico de Advertências', value: allWarns.slice(0, 1024) })
+            .setFooter({ text: 'SPRP • Sistema de Advertências' })
+            .setTimestamp();
+
+        await member.user.send({ embeds: [new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle(`⛔ Você foi banido do ${guild.name}`)
+            .setDescription(`Você atingiu o limite de **${maxWarns} advertências** e foi banido automaticamente.`)
+            .addFields({ name: '📋 Histórico', value: allWarns.slice(0, 1024) })
+            .setTimestamp()
+        ]}).catch(() => {});
+
+        banned = await member.ban({ reason: `Ban automático — ${maxWarns} advertências acumuladas` })
+            .then(() => true)
+            .catch(() => false);
+
+        if (banned) {
+            client.registerBan({
+                userId: member.id,
+                tag: member.user.tag,
+                type: 'autoban_warns',
+                reason: `Ban automático — ${maxWarns} advertências acumuladas`,
+                moderator: 'Sistema de Advertências',
+                moderatorId: client.user?.id
+            });
+        }
+
+        if (channel) await channel.send({ embeds: [banEmbed] }).catch(() => {});
+        await client.sendLog(guild, banEmbed);
+    }
+
+    return { count, maxWarns, warnId: warnEntry.id, banned };
+};
+
+client.registerBan = (data) => {
+    const userId = String(data.userId);
+    const bans = client.loadData('bans.json');
+    if (!Array.isArray(bans[userId])) bans[userId] = [];
+
+    const entry = {
+        id:          'b_' + randomBytes(4).toString('hex'),
+        tag:         data.tag ?? 'Desconhecido',
+        type:        data.type ?? 'ban',
+        reason:      data.reason ?? 'Sem motivo informado',
+        moderator:   data.moderator ?? 'Sistema',
+        moderatorId: data.moderatorId ?? client.user?.id ?? 'system',
+        timestamp:   Date.now(),
+        expiresAt:   data.expiresAt ?? null,
+        duration:    data.duration ?? null,
+        active:      true
+    };
+
+    bans[userId].push(entry);
+    client.saveData('bans.json', bans);
+    return entry;
+};
+
+client.registerUnban = (data) => {
+    const userId = String(data.userId);
+    const bans = client.loadData('bans.json');
+    const list = Array.isArray(bans[userId]) ? bans[userId] : [];
+    const active = [...list].reverse().find(entry => entry.active);
+
+    if (active) {
+        active.active = false;
+        active.unbannedAt = Date.now();
+        active.unbannedBy = data.moderator ?? 'Sistema';
+        active.unbannedById = data.moderatorId ?? client.user?.id ?? 'system';
+        active.unbanReason = data.reason ?? 'Sem motivo informado';
+        client.saveData('bans.json', bans);
+    }
+
+    return active ?? null;
 };
 
 // ── Carregar comandos ────────────────────────────────────────────
@@ -88,7 +272,8 @@ for (const file of fs.readdirSync('./comandos').filter(f => f.endsWith('.js'))) 
 }
 
 // ── Anti-flood (tracker em memória) ──────────────────────────────
-const floodMap = new Map(); // userId → { count, firstMs }
+const floodMap = new Map();    // userId -> { count, firstMs }
+const floodAlerts = new Map(); // userId -> alertas antes do timeout
 
 // ── Verificação de punições temporárias ──────────────────────────
 async function checkExpiry() {
@@ -103,6 +288,12 @@ async function checkExpiry() {
         if (d.expiresAt && now >= d.expiresAt) {
             try {
                 await guild.members.unban(uid, 'TempBan expirado automaticamente');
+                client.registerUnban({
+                    userId: uid,
+                    reason: 'TempBan expirado automaticamente',
+                    moderator: 'Sistema TempBan',
+                    moderatorId: client.user?.id
+                });
                 delete bans[uid];
                 bansChanged = true;
                 await client.sendLog(guild, new EmbedBuilder()
@@ -122,16 +313,17 @@ async function checkExpiry() {
         if (d.expiresAt && now >= d.expiresAt) {
             try {
                 const member = await guild.members.fetch(uid).catch(() => null);
-                if (member) {
-                    await member.roles.remove(config.roles.castigo, 'Castigo expirado');
-                    delete casc[uid];
-                    cascChanged = true;
-                    await client.sendLog(guild, new EmbedBuilder()
-                        .setColor('#00FF88')
-                        .setTitle('🔓 Castigo Expirado')
-                        .setDescription(`<@${uid}> (\`${d.tag}\`) saiu do castigo automaticamente.`)
-                        .setTimestamp());
+                if (member && config.roles?.castigo && !String(config.roles.castigo).startsWith('ID_')) {
+                    await member.roles.remove(config.roles.castigo, 'Castigo expirado').catch(() => {});
                 }
+
+                delete casc[uid];
+                cascChanged = true;
+                await client.sendLog(guild, new EmbedBuilder()
+                    .setColor('#00FF88')
+                    .setTitle('🔓 Castigo Expirado')
+                    .setDescription(`<@${uid}> (\`${d.tag}\`) saiu do castigo automaticamente.`)
+                    .setTimestamp());
             } catch {}
         }
     }
@@ -202,45 +394,98 @@ client.on('messageCreate', async msg => {
         }
 
         // Anti-flood
-        if (config.automod.antiflood) {
-            const uid = msg.author.id;
-            const now = Date.now();
-            const fl  = floodMap.get(uid) ?? { count: 0, first: now };
+       if (config.automod.antiflood) {
+    const uid = msg.author.id;
+    const now = Date.now();
+    const fl  = floodMap.get(uid) ?? { count: 0, first: now };
 
-            if (now - fl.first > config.automod.floodInterval) {
-                fl.count = 1;
-                fl.first = now;
-            } else {
-                fl.count++;
-            }
-            floodMap.set(uid, fl);
+    if (now - fl.first > config.automod.floodInterval) {
+        fl.count = 1;
+        fl.first = now;
+    } else {
+        fl.count++;
+    }
+    floodMap.set(uid, fl);
 
-            if (fl.count >= config.automod.floodLimit) {
-                floodMap.delete(uid);
-                // Deletar mensagens recentes do usuário
-                const fetched = await msg.channel.messages.fetch({ limit: 10 }).catch(() => null);
-                if (fetched) {
-                    const toDelete = fetched.filter(m =>
-                        m.author.id === uid &&
-                        Date.now() - m.createdTimestamp < 14 * 24 * 60 * 60 * 1000
-                    );
-                    await msg.channel.bulkDelete(toDelete, true).catch(() => {});
-                }
-                const n = await msg.channel.send(
-                    `⚠️ <@${uid}> **Anti-flood ativado!** Reduza a velocidade das mensagens.`
-                );
-                setTimeout(() => n.delete().catch(() => {}), 5000);
-                await client.sendLog(msg.guild, new EmbedBuilder()
-                    .setColor('#FF8800')
-                    .setTitle('⚠️ Anti-Flood Ativado')
-                    .addFields(
-                        { name: '👤 Usuário',   value: `<@${uid}> — ${msg.author.tag}`, inline: true },
-                        { name: '📍 Canal',     value: `<#${msg.channel.id}>`, inline: true },
-                        { name: '📊 Velocidade', value: `${fl.count} msgs em ${config.automod.floodInterval / 1000}s`, inline: true }
-                    ).setTimestamp());
-                return;
-            }
+    if (fl.count >= config.automod.floodLimit) {
+        floodMap.delete(uid);
+        const alertCount = (floodAlerts.get(uid) ?? 0) + 1;
+        floodAlerts.set(uid, alertCount);
+
+        // Deletar mensagens
+        const fetched = await msg.channel.messages.fetch({ limit: 10 }).catch(() => null);
+        if (fetched) {
+            const toDelete = fetched.filter(m =>
+                m.author.id === uid &&
+                Date.now() - m.createdTimestamp < 14 * 24 * 60 * 60 * 1000
+            );
+            await msg.channel.bulkDelete(toDelete, true).catch(() => {});
         }
+
+        // Se for o 3º alerta, aplica castigo automático
+        if (alertCount >= 3) {
+            floodAlerts.delete(uid);
+            const castigoDuration = 10 * 60 * 1000;
+            const castigoExpiresAt = Date.now() + castigoDuration;
+            const castigoExpireStamp = Math.floor(castigoExpiresAt / 1000);
+            const castigoReason = 'Anti-flood: 3º alerta';
+
+            await msg.member.timeout(castigoDuration, castigoReason).catch(() => {});
+
+            const casc = client.loadData('castigados.json');
+            casc[uid] = {
+                tag:       msg.author.tag,
+                reason:    castigoReason,
+                moderator: 'Sistema Anti-Flood',
+                modId:     client.user?.id ?? 'system',
+                timestamp: Date.now(),
+                expiresAt: castigoExpiresAt,
+                duration:  '10m',
+                automatic: true,
+                source:    'antiflood'
+            };
+            client.saveData('castigados.json', casc);
+
+            const autoWarn = await client.addAutomaticWarn({
+                guild: msg.guild,
+                member: msg.member,
+                channel: msg.channel,
+                reason: 'Flood excessivo: 3 alertas de flood acumulados',
+                source: 'Sistema Anti-Flood'
+            });
+            
+            const n = await msg.channel.send(
+                `🔒 <@${uid}> foi colocado em **castigo de 10 minutos** e recebeu **advertência automática (${autoWarn.count}/${autoWarn.maxWarns})** por flood excessivo.`
+            );
+            setTimeout(() => n.delete().catch(() => {}), 8000);
+
+            await client.sendLog(msg.guild, new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle('🔒 Castigo Anti-Flood')
+                .addFields(
+                    { name: '👤 Usuário',   value: `<@${uid}> — ${msg.author.tag}`, inline: true },
+                    { name: '📍 Canal',     value: `<#${msg.channel.id}>`, inline: true },
+                    { name: '🔒 Castigo',   value: `10 minutos\nLibera <t:${castigoExpireStamp}:R>`, inline: true },
+                    { name: '⏰ Motivo',    value: '3º alerta de flood', inline: true },
+                    { name: '⚠️ Advertência automática', value: `${autoWarn.count} / ${autoWarn.maxWarns}`, inline: true }
+                ).setTimestamp());
+        } else {
+            const n = await msg.channel.send(
+                `⚠️ <@${uid}> **Alerta ${alertCount}/3 de flood!** 3 alertas = castigo 10min + advertência automática.`
+            );
+            setTimeout(() => n.delete().catch(() => {}), 5000);
+
+            await client.sendLog(msg.guild, new EmbedBuilder()
+                .setColor('#FF8800')
+                .setTitle(`⚠️ Alerta de Flood ${alertCount}/3`)
+                .addFields(
+                    { name: '👤 Usuário',   value: `<@${uid}> — ${msg.author.tag}`, inline: true },
+                    { name: '📍 Canal',     value: `<#${msg.channel.id}>`, inline: true }
+                ).setTimestamp());
+        }
+        return;
+    }
+}
     }
 
     // ── 3. Processar Comandos ──
@@ -275,7 +520,7 @@ client.on('guildMemberAdd', async member => {
     // ── Anti-Cheat de Bot ──
     if (member.user.bot) {
         if (!config.automod.antibot) return;
-        const allowed = (config.allowedBots ?? []).includes(member.id);
+        const allowed = client.isBotAuthorized(member.id);
         if (!allowed) {
             await member.kick('Bot não autorizado — Anti-Cheat').catch(() => {});
         }
@@ -317,7 +562,20 @@ client.on('guildMemberAdd', async member => {
             .setTimestamp()
         ]}).catch(() => {});
 
-        await member.ban({ reason: `Alt conhecida de ${altEntry.mainTag} — ${altEntry.reason ?? 'Ban automático'}` }).catch(() => {});
+        const banReason = `Alt conhecida de ${altEntry.mainTag} — ${altEntry.reason ?? 'Ban automático'}`;
+        const banned = await member.ban({ reason: banReason })
+            .then(() => true)
+            .catch(() => false);
+        if (banned) {
+            client.registerBan({
+                userId: member.id,
+                tag: member.user.tag,
+                type: 'auto_altban',
+                reason: banReason,
+                moderator: 'Sistema Anti-Alt',
+                moderatorId: client.user?.id
+            });
+        }
 
         await client.sendLog(member.guild, new EmbedBuilder()
             .setColor('#FF0000')

@@ -26,7 +26,7 @@ module.exports = {
             .setColor('#5865F2')
             .setTitle('📡 TP Executado')
             .addFields(
-                { name: '👮 Moderador', value: `${msg.author.tag} foi até`, inline: true },
+                { name: '👮 Autor', value: `${msg.author.tag} foi até`, inline: true },
                 { name: '🔊 Call',      value: `**${target.voice.channel.name}**`, inline: true },
                 { name: '👤 Usuário',   value: target.user.tag, inline: true }
             )

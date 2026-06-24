@@ -4,7 +4,7 @@ module.exports = {
     name: 'altban',
     description: 'Bane uma conta e a registra como alt. Futuras entradas serão banidas automaticamente.',
     usage: '!altban @alt [@contaPrincipal] [motivo]',
-    permission: 'ban',
+    permission: 'altban',
 
     async execute(msg, args, client) {
         const alt = msg.mentions.members.first();
@@ -69,6 +69,14 @@ module.exports = {
         ]}).catch(() => {});
 
         await alt.ban({ reason: `[ALT BAN] ${msg.author.tag} | ${reason}` });
+        client.registerBan({
+            userId: alt.id,
+            tag: alt.user.tag,
+            type: 'altban',
+            reason,
+            moderator: msg.author.tag,
+            moderatorId: msg.author.id
+        });
 
         const embed = new EmbedBuilder()
             .setColor('#FF0000')
@@ -78,7 +86,7 @@ module.exports = {
             .addFields(
                 { name: '👤 Alt banida',      value: `${alt.user.tag}\n\`${alt.id}\``, inline: true },
                 { name: '👤 Conta principal', value: main ? `${main.user.tag}\n\`${main.id}\`` : '*(não vinculada)*', inline: true },
-                { name: '👮 Moderador',       value: msg.author.tag, inline: true },
+                { name: '👮 Autor',       value: msg.author.tag, inline: true },
                 { name: '📋 Motivo',          value: reason }
             )
             .setFooter({ text: 'SPRP • Anti-Alt' })

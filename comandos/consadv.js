@@ -1,11 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
-    name: 'advs',
-    aliases: ['warns', 'advertencias'],
+    name: 'consadv',
+    aliases: ['advs', 'consadvs', 'warns', 'advertencias'],
     description: 'Mostra as advertências de um membro',
-    usage: '!advs @usuario',
-    permission: 'advs.view',
+    usage: '!consadv @usuario',
+    permission: 'consadv',
 
     async execute(msg, args, client) {
         const target = msg.mentions.members.first() ?? msg.member;

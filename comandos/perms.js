@@ -1,8 +1,11 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 
 const PERMS_VALIDAS = [
-    'ban','tempban','unban','kick','warn','warnstaff',
-    'clean','castigo','shadowban','tp','warns','unwarn'
+    'ban', 'tempban', 'rban', 'consbans', 'kick',
+    'adv', 'consadv', 'radv', 'advstaff', 'consadvstaff',
+    'castigo', 'rcastigo',
+    'altban', 'linkalts', 'rlinkalts', 'consalts', 'consconta',
+    'clean', 'tp', 'puxar'
 ];
 
 module.exports = {
@@ -10,7 +13,6 @@ module.exports = {
     aliases: ['permissao', 'perm'],
     description: 'Gerencia permissões customizadas para usuários ou cargos',
     usage: '!perms <set|list|reset> @usuario/cargo [permissao] [true|false]',
-    permission: 'perms',
 
     async execute(msg, args, client) {
         if (!msg.member.permissions.has(PermissionsBitField.Flags.Administrator))

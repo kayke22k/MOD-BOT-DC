@@ -2,7 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     name: 'radv',
-    aliases: ['radv', 'removeradv'],
+    aliases: ['removeradv'],
     description: 'Remove a advertência mais antiga de um usuário',
     usage: '!radv @usuario',
     permission: 'radv',

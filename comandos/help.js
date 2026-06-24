@@ -5,14 +5,15 @@ const CATEGORIAS = {
         { cmd: '!ban @user [motivo]',                desc: 'Ban permanente' },
         { cmd: '!tempban @user <tempo> [motivo]',    desc: 'Ban temporário (1d, 2h, 30m)' },
         { cmd: '!rban <ID> [motivo]',               desc: 'Desbanir pelo ID' },
+        { cmd: '!consbans',                         desc: 'Consultar bans registrados' },
         { cmd: '!kick @user [motivo]',               desc: 'Expulsar do servidor' },
     ],
     '⚠️ Advertências': [
         { cmd: '!adv @user <motivo>',               desc: 'Advertir (3 = ban auto)' },
-        { cmd: '!advs @user',                       desc: 'Ver advertências' },
-        { cmd: '!radv @user ',                 desc: 'Remover advertência ' },
+        { cmd: '!consadv @user',                    desc: 'Consultar advertências' },
+        { cmd: '!radv @user',                       desc: 'Remover advertência' },
         { cmd: '!advstaff @staff <motivo>',         desc: 'Advertir membro da staff' },
-        { cmd: '!advsstaf @staff',                  desc: 'Ver warns da staff' },
+        { cmd: '!consadvstaff @staff',              desc: 'Consultar warns da staff' },
     ],
     '🔒 Restrições': [
         { cmd: '!castigo @user <tempo|perm> <motivo>', desc: 'Colocar em castigo' },
@@ -20,9 +21,10 @@ const CATEGORIAS = {
     ],
     '🔍 Anti-Alt': [
         { cmd: '!altban @alt [@principal] [motivo]', desc: 'Banir alt e registrar (auto-ban em reentradas)' },
-        { cmd: '!linkalts @principal @alt [motivo]', desc: 'Vincular contas manualmente' },
-        { cmd: '!alts @user',                        desc: 'Ver alts registradas' },
-        { cmd: '!containfo @user',                   desc: 'Info da conta (idade, flags, warns)' },
+        { cmd: '!linkalts @principal @alt1 [@alt2...] [motivo]', desc: 'Vincular uma ou várias alts' },
+        { cmd: '!rlinkalts @principal @alt',         desc: 'Remover vinculo de alt' },
+        { cmd: '!consalts @user',                    desc: 'Consultar alts registradas' },
+        { cmd: '!consconta @user',                   desc: 'Info da conta (idade, flags, warns)' },
     ],
     '🛠️ Utilitários': [
         { cmd: '!clean <1-9999999999> [@user]',             desc: 'Limpar mensagens do canal' },
@@ -31,6 +33,12 @@ const CATEGORIAS = {
         { cmd: '!perms set @user/cargo <perm> <true|false>', desc: 'Definir permissão customizada' },
         { cmd: '!perms list @user/cargo',            desc: 'Ver permissões customizadas' },
         { cmd: '!perms reset @user/cargo',           desc: 'Resetar permissões' },
+    ],
+    '👨‍💻 Técnico': [
+        { cmd: '!telemetria',                         desc: 'Status do bot (dono/programadores)' },
+        { cmd: '!autorizarbot add @bot [motivo]',     desc: 'Autorizar bot no Anti-Bot' },
+        { cmd: '!autorizarbot remove <ID>',           desc: 'Remover bot autorizado' },
+        { cmd: '!autorizarbot list',                  desc: 'Listar bots autorizados' },
     ],
 };
 
@@ -55,7 +63,7 @@ module.exports = {
 
         embed.addFields({
             name: '🤖 AutoMod (automático)',
-            value: '`Anti-link` • `Anti-invite` • `Anti-flood` • `Anti-bot` • `Anti-alt` (conta nova / alt conhecida)'
+            value: '`Anti-link` • `Anti-invite` • `Anti-bot` • `Anti-alt` (conta nova / alt conhecida)\n`Anti-flood`: 3 alertas = castigo 10min + advertência automática'
         });
 
         await msg.reply({ embeds: [embed] });

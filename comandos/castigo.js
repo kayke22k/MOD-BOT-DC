@@ -68,7 +68,7 @@ module.exports = {
             .setThumbnail(target.user.displayAvatarURL())
             .addFields(
                 { name: '👤 Usuário',     value: `${target.user.tag}\n\`${target.id}\``, inline: true },
-                { name: '👮 Moderador',   value: msg.author.tag, inline: true },
+                { name: '👮 Autor',   value: msg.author.tag, inline: true },
                 { name: '⏰ Duração',     value: durStr, inline: true },
                 { name: '📅 Liberado em', value: `<t:${expireStamp}:F>`, inline: true },
                 { name: '📋 Motivo',      value: reason }

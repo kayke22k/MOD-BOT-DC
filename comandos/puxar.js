@@ -2,10 +2,10 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     name: 'puxar',
-    aliases: ['puxar', 'chamar'],
+    aliases: ['chamar'],
     description: 'Puxa um usuário para sua call atual (ou canal mencionado)',
     usage: '!puxar @usuario [#canal-de-voz]',
-    permission: 'tp',
+    permission: 'puxar',
 
     async execute(msg, args, client) {
         const target = msg.mentions.members.first();
@@ -36,7 +36,7 @@ module.exports = {
             .addFields(
                 { name: '👤 Usuário',   value: target.user.tag, inline: true },
                 { name: '🔊 Destino',   value: `**${destChannel.name}**`, inline: true },
-                { name: '👮 Moderador', value: msg.author.tag, inline: true }
+                { name: '👮 Autor', value: msg.author.tag, inline: true }
             )
             .setFooter({ text: 'SPRP • Moderação' })
             .setTimestamp();

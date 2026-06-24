@@ -1,39 +1,75 @@
 const { EmbedBuilder } = require('discord.js');
+const { randomBytes } = require('crypto');
 
 module.exports = {
     name: 'advstaff',
-    aliases: ['advsstaf', 'staffwarns'],
-    description: 'Mostra as advertências de um membro da staff',
-    usage: '!advstaff @staff',
+    aliases: ['warnstaff', 'advertirstaff'],
+    description: 'Adverte um membro da staff (registrado no canal de logs da staff)',
+    usage: '!advstaff @staff <motivo>',
     permission: 'advstaff',
 
     async execute(msg, args, client) {
-        const target = msg.mentions.members.first() ?? msg.member;
+        const target = msg.mentions.members.first();
+        if (!target)
+            return msg.reply('❌ Use: `!advstaff @staff motivo`');
+        if (target.id === msg.author.id)
+            return msg.reply('❌ Você não pode se advertir.');
 
+        const isTargetStaff = target.roles.cache.some(r => client.config.roles.staff.includes(r.id));
+        if (!isTargetStaff)
+            return msg.reply('❌ Este usuário não é membro da staff. Use `!advs` para membros comuns.');
+
+        const reason = args.slice(1).join(' ');
+        if (!reason)
+            return msg.reply('❌ Informe o motivo da advertência.');
+
+        // Carregar e salvar warn da staff
         const staffWarns = client.loadData('staffwarns.json');
-        const userData = staffWarns[target.id];
+        if (!staffWarns[target.id]) staffWarns[target.id] = { tag: target.user.tag, warns: [] };
 
-        if (!userData || userData.warns.length === 0) {
-            return msg.reply({ embeds: [new EmbedBuilder()
-                .setColor('#00FF88')
-                .setDescription(`✅ **${target.user.tag}** não possui advertências de staff.`)
-            ]});
-        }
+        const warnId = 'sw_' + randomBytes(4).toString('hex');
+        const warnEntry = {
+            id:          warnId,
+            reason,
+            moderator:   msg.author.tag,
+            moderatorId: msg.author.id,
+            timestamp:   Date.now()
+        };
 
-        const list = userData.warns.map((w, i) => {
-            const date = `<t:${Math.floor(w.timestamp / 1000)}:d>`;
-            return `\`${i + 1}.\` ${w.reason}\n> 👮 ${w.moderator} • ${date} • \`${w.id}\``;
-        }).join('\n\n');
+        staffWarns[target.id].warns.push(warnEntry);
+        staffWarns[target.id].tag = target.user.tag;
+        client.saveData('staffwarns.json', staffWarns);
+
+        const count = staffWarns[target.id].warns.length;
+
+        // DM para o membro da staff advertido
+        await target.user.send({ embeds: [new EmbedBuilder()
+            .setColor('#FFAA00')
+            .setTitle(`⚠️ Advertência Staff — ${msg.guild.name}`)
+            .setDescription('Você recebeu uma advertência da administração como membro da staff.')
+            .addFields(
+                { name: '📋 Motivo',       value: reason },
+                { name: '👮 Emitida por',  value: msg.author.tag },
+                { name: '🆔 ID',           value: `\`${warnId}\`` }
+            ).setTimestamp()
+        ]}).catch(() => {});
 
         const embed = new EmbedBuilder()
             .setColor('#FFAA00')
-            .setTitle(`⚠️ Warns Staff — ${target.user.tag}`)
+            .setTitle('⚠️ Advertência Staff Aplicada')
             .setThumbnail(target.user.displayAvatarURL())
-            .setDescription(list)
-            .addFields({ name: '📊 Total', value: `${userData.warns.length} advertência(s)` })
+            .addFields(
+                { name: '👤 Staff',        value: `${target.user.tag}\n\`${target.id}\``, inline: true },
+                { name: '👮 Emitida por',  value: msg.author.tag, inline: true },
+                { name: '📊 Total warns',  value: `${count}`, inline: true },
+                { name: '🆔 ID',           value: `\`${warnId}\``, inline: true },
+                { name: '📋 Motivo',       value: reason }
+            )
             .setFooter({ text: 'SPRP • Staff • Registro interno' })
             .setTimestamp();
 
         await msg.reply({ embeds: [embed] });
+        // Log vai para o canal da staff
+        await client.sendLog(msg.guild, embed, 'staff');
     }
 };

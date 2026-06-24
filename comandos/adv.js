@@ -18,7 +18,7 @@ const TIPOS = {
 
 module.exports = {
     name: 'adv',
-    aliases: ['adv', 'advertir'],
+    aliases: ['advertir'],
     description: 'Adverte um membro (3 warns = ban automático)',
     usage: '!adv @usuario <motivo>',
     permission: 'adv',
@@ -121,7 +121,19 @@ module.exports = {
                 .setTimestamp()
             ]}).catch(() => {});
 
-            await target.ban({ reason: `Ban automático — ${maxWarns} advertências acumuladas` }).catch(() => {});
+            const banned = await target.ban({ reason: `Ban automático — ${maxWarns} advertências acumuladas` })
+                .then(() => true)
+                .catch(() => false);
+            if (banned) {
+                client.registerBan({
+                    userId: target.id,
+                    tag: target.user.tag,
+                    type: 'autoban_warns',
+                    reason: `Ban automático — ${maxWarns} advertências acumuladas`,
+                    moderator: 'Sistema de Advertências',
+                    moderatorId: client.user?.id
+                });
+            }
 
             await msg.channel.send({ embeds: [banEmbed] });
             await client.sendLog(msg.guild, banEmbed);
